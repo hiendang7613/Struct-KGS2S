@@ -1,4 +1,3 @@
-# Struct-KGS2S
 <h1 align="center">
   Struct-KGS2S
 </h1>
