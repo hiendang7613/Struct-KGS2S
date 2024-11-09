@@ -82,6 +82,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 We extend our gratitude to contributors and those who provided datasets. This project builds upon prior work in link prediction and Knowledge Graph completion.
 
----
-
-Feel free to customize further based on specific project details!
