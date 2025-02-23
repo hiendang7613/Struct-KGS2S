@@ -40,7 +40,7 @@ Struct-KGS2S is designed to address the challenges in link prediction within Kno
 Clone the repository and install the dependencies:
 
 ```bash
-git clone https://github.com/your-username/Struct-KGS2S.git
+git clone https://github.com/hiendang7613/Struct-KGS2S.git
 cd Struct-KGS2S
 pip install -r requirements.txt
 ```
