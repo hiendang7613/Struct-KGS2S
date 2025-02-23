@@ -1,4 +1,4 @@
-your-paper-repo/
+Struct-KGS2S/
 │
 ├── README.md                   # Overview of the project, setup instructions, and usage
 ├── requirements.txt            # List of Python dependencies
@@ -13,10 +13,6 @@ your-paper-repo/
 │   ├── saved_models/           # Saved model checkpoints
 │   └── README.md               # Description of the models and training process
 │
-├── notebooks/                  # Jupyter notebooks for experiments and analysis
-│   ├── training_evaluate_fb15k237.ipynb  # Main notebook for training and evaluation
-│   └── README.md               # Description of the notebooks and their purpose
-│
 ├── scripts/                    # Python scripts for data processing, training, etc.
 │   ├── preprocess_data.py      # Script for preprocessing data
 │   ├── train_model.py          # Script for training the model
@@ -28,15 +24,5 @@ your-paper-repo/
 │   ├── model.py                # Model definition (e.g., EditedT5)
 │   ├── utils.py                # Utility functions (e.g., tokenization, evaluation)
 │   └── README.md               # Description of the source code
-│
-├── results/                    # Directory for experimental results
-│   ├── figures/                # Figures and plots
-│   ├── tables/                 # Tables and metrics
-│   └── README.md               # Description of the results
-│
-├── docs/                       # Documentation for the project
-│   ├── paper/                  # LaTeX or Markdown files for the paper
-│   ├── supplementary/          # Supplementary materials
-│   └── README.md               # Description of the documentation
 │
 └── .gitignore                  # Files and directories to ignore in Git
