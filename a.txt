@@ -1,0 +1,42 @@
+your-paper-repo/
+│
+├── README.md                   # Overview of the project, setup instructions, and usage
+├── requirements.txt            # List of Python dependencies
+│
+├── data/                       # Directory for datasets and preprocessed data
+│   ├── raw/                    # Raw data files (e.g., FB15k-237 dataset)
+│   ├── processed/              # Processed data files (e.g., tokenized data, embeddings)
+│   └── README.md               # Description of the data and preprocessing steps
+│
+├── models/                     # Directory for model-related files
+│   ├── pretrained/             # Pretrained models (e.g., RotatE embeddings)
+│   ├── saved_models/           # Saved model checkpoints
+│   └── README.md               # Description of the models and training process
+│
+├── notebooks/                  # Jupyter notebooks for experiments and analysis
+│   ├── training_evaluate_fb15k237.ipynb  # Main notebook for training and evaluation
+│   └── README.md               # Description of the notebooks and their purpose
+│
+├── scripts/                    # Python scripts for data processing, training, etc.
+│   ├── preprocess_data.py      # Script for preprocessing data
+│   ├── train_model.py          # Script for training the model
+│   ├── evaluate_model.py       # Script for evaluating the model
+│   └── README.md               # Description of the scripts and their usage
+│
+├── src/                        # Source code for the project
+│   ├── dataset.py              # Dataset handling code (e.g., KGCDataset)
+│   ├── model.py                # Model definition (e.g., EditedT5)
+│   ├── utils.py                # Utility functions (e.g., tokenization, evaluation)
+│   └── README.md               # Description of the source code
+│
+├── results/                    # Directory for experimental results
+│   ├── figures/                # Figures and plots
+│   ├── tables/                 # Tables and metrics
+│   └── README.md               # Description of the results
+│
+├── docs/                       # Documentation for the project
+│   ├── paper/                  # LaTeX or Markdown files for the paper
+│   ├── supplementary/          # Supplementary materials
+│   └── README.md               # Description of the documentation
+│
+└── .gitignore                  # Files and directories to ignore in Git
