@@ -2357,6 +2357,7 @@ class StructKGS2S(T5ForConditionalGeneration):
           self_key = torch.zeros_like(cross_key)
           self_value = torch.zeros_like(cross_value)
           past_key_values.append((self_key, self_value, cross_key, cross_value))
+        past_key_values = EncoderDecoderCache.from_legacy_cache(past_key_values)
 
 
       if self.model_parallel:
@@ -2382,7 +2383,7 @@ class StructKGS2S(T5ForConditionalGeneration):
           inputs_embeds=decoder_inputs_embeds,
           past_key_values=past_key_values,
           encoder_hidden_states=hidden_states,
-          encoder_attention_mask=attention_mask,
+          encoder_attention_mask=torch.cat([neighboors_embeddings_mask, attention_mask], dim=1),
           head_mask=decoder_head_mask,
           cross_attn_head_mask=cross_attn_head_mask,
           use_cache=use_cache,
@@ -2444,7 +2445,7 @@ class StructKGS2S(T5ForConditionalGeneration):
         **kwargs,
     ):
         # cut decoder_input_ids if past_key_values is used
-        if past_key_values is not None:
+        if len(past_key_values.self_attention_cache.key_cache) !=0:
             past_length = past_key_values[0][0].shape[2]
 
             # Some generation methods already pass only the last input ID
@@ -2455,6 +2456,8 @@ class StructKGS2S(T5ForConditionalGeneration):
                 remove_prefix_length = input_ids.shape[1] - 1
 
             input_ids = input_ids[:, remove_prefix_length:]
+        else:
+            past_key_values = None
 
         return {
             "decoder_input_ids": input_ids,

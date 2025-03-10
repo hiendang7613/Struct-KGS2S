@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset
 import random
-from .utils import _tokenize
+from src.utils import _tokenize
 
 
 def getpreferredencoding(do_setlocale = True):
@@ -78,6 +78,7 @@ class KGCDataset(Dataset):
             'valid': Hop1Index(self.id_triplets['valid'], self.num_ents, 2),
             'test': Hop1Index(self.id_triplets['test'], self.num_ents, 2)
         }
+        _tokenize.tokenizer = tokenizer
 
         self.mask_token = _tokenize('<extra_id_90>')
         self.eos_token = torch.tensor([tokenizer.eos_token_id])
@@ -192,7 +193,7 @@ class KGCDataset(Dataset):
             'neighboors_embeddings': neighboors_embeddings,
             'neighboors_embeddings_mask': neighboors_embeddings_mask,
             'target_ent_embeddings': target_ent_embeddings,
-            'triplet': self.id_triplets[split][idx],
+            'triplet': torch.tensor(self.id_triplets[split][idx]),
         }
         return output
     

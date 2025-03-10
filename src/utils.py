@@ -7,6 +7,10 @@ from typing import Dict, List
 from dataclasses import dataclass
 
 
+def _tokenize(x):
+    return _tokenize.tokenizer(x, return_tensors="pt")['input_ids'][0][:-1]
+
+
 def _get_performance(ranks):
     ranks = np.array(ranks, dtype=np.float32)
     out = dict()
@@ -36,7 +40,7 @@ def get_performance(model, tail_ranks, head_ranks):
 
 
 class RunEval:
-    def __init__(self, configs, model, tokenizer, ent_name_list, target_ids, trie, ext_neigs_0, ext_neigs_2):
+    def __init__(self, configs, model, tokenizer, ent_name_list, target_ids, trie, ext_neigs_0, ext_neigs_2, device='cpu'):
         self.configs = configs
         self.ent_name_list = ent_name_list
         self.target_ids = target_ids
@@ -46,16 +50,17 @@ class RunEval:
         self.trie = trie
         self.ext_neigs_0 = ext_neigs_0
         self.ext_neigs_2 = ext_neigs_2
+        self.device = device
 
     @torch.no_grad()
     def validation_step(self, batched_data, dataset_idx):
-        input_ids = batched_data['input_ids'].to('cuda')
-        attention_mask = batched_data['attention_mask'].to('cuda')
+        input_ids = batched_data['input_ids'].to(self.device)
+        attention_mask = batched_data['attention_mask'].to(self.device)
         labels = batched_data['labels']
         labels = torch.where(labels != -100, labels, self.tokenizer.pad_token_id)
-        neighboors_embeddings=batched_data['neighboors_embeddings'].to('cuda')
-        neighboors_embeddings_mask=batched_data['neighboors_embeddings_mask'].to('cuda')
-        target_ent_embeddings=batched_data['target_ent_embeddings'].to('cuda')
+        neighboors_embeddings=batched_data['neighboors_embeddings'].to(self.device)
+        neighboors_embeddings_mask=batched_data['neighboors_embeddings_mask'].to(self.device)
+        target_ent_embeddings=batched_data['target_ent_embeddings'].to(self.device)
         triple_id = batched_data['triplet'].numpy()
 
         old_seqs = []
@@ -74,12 +79,8 @@ class RunEval:
           pred = outputs.sequences.cpu()
           old_seqs.append(pred)
           pred = pred[:,1:]
-          if pred.shape[1] > labels.shape[1]:
-            pred = pred[:,:labels.shape[1]]
-          else:
-            cut_labels = labels[:,:pred.shape[1]]
-          cut_labels = labels
-          seq_match = (pred==cut_labels).all(1)
+          min_shape = min(pred.shape[1], labels.shape[1])
+          seq_match = (pred[:, :min_shape] == labels[:, :min_shape]).all(1)
           new_ranks = torch.where(~seq_match, ranks, i+1)
           ranks = torch.min(ranks, new_ranks)
 
@@ -95,7 +96,7 @@ class RunEval:
         pred_ids = self.target_ids[triple_id[batch_idx][dataset_idx]]
         pred_id = int(pred_ids[len(input_ids)])
         ext_neigs = self.ext_neigs_2 if dataset_idx == 0 else self.ext_neigs_0
-        all_gt_ids = torch.cat(get_neigs(triple_id[batch_idx][2-dataset_idx], triple_id[batch_idx][1]), ext_neigs)
+        all_gt_ids = torch.cat(get_neigs(triple_id[batch_idx][2-dataset_idx], triple_id[batch_idx][1], ext_neigs))
 
         all_gt_seq = torch.index_select(self.target_ids, 0, all_gt_ids)
         all_gt_seq_mask = (all_gt_seq[:, :len(input_ids)]==input_ids).all(1)
@@ -141,9 +142,9 @@ class RunEval:
 
 # get all ground truth
 def get_neigs(ent_id, rel_id, ext_get_neigs):
-  n_train = ext_get_neigs['train'].__getitem__(ent_id, rel_id)
-  n_valid = ext_get_neigs['valid'].__getitem__(ent_id, rel_id)
-  n_test = ext_get_neigs['test'].__getitem__(ent_id, rel_id)
+  n_train = torch.tensor(ext_get_neigs['train'].__getitem__(ent_id, rel_id))
+  n_valid = torch.tensor(ext_get_neigs['valid'].__getitem__(ent_id, rel_id))
+  n_test = torch.tensor(ext_get_neigs['test'].__getitem__(ent_id, rel_id))
   return [n_train, n_valid, n_test]
 
 

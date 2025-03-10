@@ -1,35 +1,39 @@
 import os
 import torch
-from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, T5Tokenizer
-from .struct_models.rotatE import RotatE
-from ..src.model import StructKGS2S
-from ..src.utils import DataCollatorForSeq2Seq
-from ..src.dataset import KGCDataset, SplitDatasetWrapper
-# torch.backends.cuda.matmul.allow_tf32 = True
-# torch.backends.cudnn.allow_tf32 = True
+from transformers import Seq2SeqTrainingArguments, Seq2SeqTrainer, T5Tokenizer, AutoConfig
+from src.struct_models.rotatE import RotatE
+from src.model import StructKGS2S
+from src.utils import DataCollatorForSeq2Seq
+from src.dataset import KGCDataset, SplitDatasetWrapper
+
 
 
 if __name__ == "__main__":
 
     dataset_name = 'fb15k-237'
-    root = '/Users/apple/structs2s/'
+    root = '/Users/apple/Struct-KGS2S/'
     max_rel_size = 237
-    
+
+    tokenizer = T5Tokenizer.from_pretrained('t5-small', padding=True)
+
     # init datasets
     kg_data_path = os.path.join(root, 'data/processed', dataset_name, 'kg_data.pt')
     kg_data = torch.load(kg_data_path)
-    rotatE = RotatE(k=350, entity_embedding=kg_data['RotatE_ent_emb'], relation_embedding=kg_data['RotatE_rel_emb'], max_rel_size=max_rel_size)
-    dataset = KGCDataset(num_ents=14541, structal_model=rotatE, kg_data=kg_data)
+    rotatE = RotatE(k=350, entity_embedding=kg_data['struct_ent_emb'], relation_embedding=kg_data['struct_rel_emb'], max_rel_size=max_rel_size)
+    dataset = KGCDataset(num_ents=14541, structal_model=rotatE, kg_data=kg_data, tokenizer=tokenizer)
     train_dataset = SplitDatasetWrapper(dataset, split="train")
     valid_dataset = SplitDatasetWrapper(dataset, split="valid")
 
-    tokenizer = T5Tokenizer.from_pretrained('t5-small', padding=True)
-    
+
     # init model
     ckpt_name ='t5-small'
-    model = StructKGS2S.from_pretrained(ckpt_name)
-    data_collator = DataCollatorForSeq2Seq(tokenizer, model=model, data_names=list(train_dataset[0].keys()))
 
+    config = AutoConfig.from_pretrained(ckpt_name)
+    config.struct_d_model = 700
+
+    model = StructKGS2S.from_pretrained(ckpt_name, config=config)
+    data_collator = DataCollatorForSeq2Seq(tokenizer, model=model, data_names=list(train_dataset[0].keys()))
+    
     # training arguments
     batch_size= 32*4
     num_train_epochs = 1000

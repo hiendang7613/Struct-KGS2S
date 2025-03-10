@@ -2,7 +2,8 @@ from transformers import T5Tokenizer
 from tqdm.auto import tqdm
 import os
 import torch
-from ..src.utils import Trie
+import numpy as np
+from src.utils import Trie, _tokenize
 
 
 
@@ -68,9 +69,6 @@ def get_ent2decs(root, dataset, max_decs = 64):
             ent2decs[ent] = _tokenize(text)[:max_decs]
     return ent2decs
 
-def _tokenize(x):
-    return _tokenize.tokenizer(x, return_tensors="pt")['input_ids'][0][:-1]
-
 
 list_set_filename = {
     'fb15k-237': 
@@ -81,7 +79,7 @@ list_set_filename = {
         }
 }
 
-def get_triplets_data(root, dataset, split):
+def get_triplets_data(root, dataset, split, ent2id, rel2id, ent2text, ent2decs, rel2text):
     set_filename = list_set_filename[dataset][split]
     path = os.path.join(root, dataset, set_filename)
     
@@ -90,20 +88,21 @@ def get_triplets_data(root, dataset, split):
     triplet_decs = []
     with open(path, "r") as f:
         total_lines = sum(1 for _ in f)
-    f.seek(0)  # Reset file pointer to the beginning
-    for i, line in tqdm(enumerate(f), total=total_lines, desc="Processing lines"):
-        head, relation, tail = line.strip().split('\t')
-        head_id = ent2id[head]
-        relation_id = rel2id[relation]
-        tail_id = ent2id[tail]
-        head_tokens = ent2text[head]
-        relation_tokens = rel2text[relation]
-        tail_tokens = ent2text[tail]
-        head_decs = ent2decs[head]
-        tail_decs = ent2decs[tail]
-        triplet_id.append((head_id, relation_id, tail_id))
-        triplet_tokens.append((head_tokens, relation_tokens, tail_tokens))
-        triplet_decs.append((head_decs, tail_decs))
+        f.seek(0)  # Reset file pointer to the beginning
+        for i, line in tqdm(enumerate(f), total=total_lines, desc="Processing lines"):
+            head, relation, tail = line.strip().split('\t')
+            head_id = ent2id[head]
+            relation_id = rel2id[relation]
+            tail_id = ent2id[tail]
+            head_tokens = ent2text[head]
+            relation_tokens = rel2text[relation]
+            tail_tokens = ent2text[tail]
+            head_decs = ent2decs[head]
+            tail_decs = ent2decs[tail]
+            triplet_id.append((head_id, relation_id, tail_id))
+            triplet_tokens.append((head_tokens, relation_tokens, tail_tokens))
+            triplet_decs.append((head_decs, tail_decs))
+    triplet_id = np.array(triplet_id)
     return triplet_id, triplet_tokens, triplet_decs
 
 def get_entid2text(ent2id, ent2text):
@@ -117,10 +116,10 @@ def get_ent_name_decode_list(tokenizer, entid2text):
     for target in tqdm(entid2text):
         ent_name_decode_list.append(tokenizer.decode(target[1:-1]))
     return ent_name_decode_list
-# run
 
+# run
 if __name__ == "__main__":
-    root = '/Users/apple/structs2s/'
+    root = '/Users/apple/Struct-KGS2S/'
     raw_data_dir = os.path.join(root, 'data/raw') 
     dataset = 'fb15k-237'  #wn18rr
 
@@ -136,9 +135,9 @@ if __name__ == "__main__":
     ent_name_decode_list = get_ent_name_decode_list(tokenizer, entid2text)
     trie = Trie(entid2text)
 
-    train_triplet_id, train_triplet_tokens, train_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'train')
-    valid_triplet_id, valid_triplet_tokens, valid_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'valid')
-    test_triplet_id, test_triplet_tokens, test_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'test')
+    train_triplet_id, train_triplet_tokens, train_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'train', ent2id, rel2id, ent2text, ent2decs, rel2text)
+    valid_triplet_id, valid_triplet_tokens, valid_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'valid', ent2id, rel2id, ent2text, ent2decs, rel2text)
+    test_triplet_id, test_triplet_tokens, test_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'test', ent2id, rel2id, ent2text, ent2decs, rel2text)
 
     pretrained_struct_emb_dir = os.path.join(root, 'pretrained', dataset)
     struct_ent_emb = torch.load(os.path.join(pretrained_struct_emb_dir, 'struct_ent_emb.pt'))
@@ -160,6 +159,7 @@ if __name__ == "__main__":
         "entid2text":entid2text,
         "trie":trie,
     }
-    
+
     kg_data_path = os.path.join(root, 'data/processed', dataset, 'kg_data.pt')
+    os.makedirs(os.path.dirname(kg_data_path), exist_ok=True)
     torch.save(kg_data, kg_data_path)
