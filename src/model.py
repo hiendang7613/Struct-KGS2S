@@ -2287,16 +2287,11 @@ class StructKGS2S(T5ForConditionalGeneration):
 
     self.key_projection = nn.Linear(config.struct_d_model, config.d_model)
     self.value_projection1 = nn.Linear(config.struct_d_model*2, config.struct_d_model*4)
-    self.value_projection2 = nn.Linear(config.struct_d_model*4, config.d_model)
+    self.value_projection2 = nn.Linear(config.struct_d_model*2, config.d_model)
     self.act = nn.PReLU()
 
     self.post_init()
 
-  def k_projection(self, x, i, batch_size):
-    return shape(self.decoder.block[i].layer[1].EncDecAttention.k(x), batch_size)
-
-  def v_projection(self, x, i, batch_size):
-    return shape(self.decoder.block[i].layer[1].EncDecAttention.v(x), batch_size)
 
   def forward(
       self,
@@ -2321,11 +2316,12 @@ class StructKGS2S(T5ForConditionalGeneration):
       neighboors_embeddings_mask=None,
   ) :
 
-      value_embeddings = self.value_projection2(self.act(self.value_projection1(neighboors_embeddings)))
-      key_embeddings = self.key_projection(target_ent_embeddings) * neighboors_embeddings_mask.unsqueeze(2)
+      value_embeddings = self.value_projection2(neighboors_embeddings) +1
+      key_embeddings = self.key_projection(target_ent_embeddings) +1 # * neighboors_embeddings_mask.unsqueeze(2)
       batch_size = value_embeddings.shape[0]
 
       use_cache = use_cache if use_cache is not None else self.config.use_cache
+      use_cache = True
       return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
       if encoder_outputs is None:
@@ -2352,12 +2348,11 @@ class StructKGS2S(T5ForConditionalGeneration):
 
         past_key_values = []
         for i in range(self.config.num_layers):
-          cross_key = self.k_projection(key_embeddings, i, batch_size)
-          cross_value = self.v_projection(value_embeddings, i, batch_size)
-          self_key = torch.zeros_like(cross_key)
-          self_value = torch.zeros_like(cross_value)
-          past_key_values.append((self_key, self_value, cross_key, cross_value))
-        past_key_values = EncoderDecoderCache.from_legacy_cache(past_key_values)
+          cross_key = shape(key_embeddings, batch_size)
+          cross_value = shape(value_embeddings, batch_size)
+          past_key_values.append((cross_key, cross_value))
+        past_key_values = EncoderDecoderCache(DynamicCache(), DynamicCache(past_key_values))
+        # past_key_values = past_key_values
 
 
       if self.model_parallel:
@@ -2375,15 +2370,22 @@ class StructKGS2S(T5ForConditionalGeneration):
               attention_mask = attention_mask.to(self.decoder.first_device)
           if decoder_attention_mask is not None:
               decoder_attention_mask = decoder_attention_mask.to(self.decoder.first_device)
-
+      # print('neighboors_embeddings_mask=', neighboors_embeddings_mask)
+      # print('attention_mask=', torch.cat([neighboors_embeddings_mask, attention_mask], dim=1).long())
+      # if neighboors_embeddings_mask is not None:
+      #   decoder_attention_mask = torch.ones_like(decoder_input_ids)
+      #   decoder_attention_mask =torch.cat([neighboors_embeddings_mask, decoder_attention_mask], dim=1).long()
+      prepad_encoder_hidden_states = torch.zeros(batch_size, neighboors_embeddings_mask.shape[1], hidden_states.shape[2])
       # Decode
       decoder_outputs = self.decoder(
           input_ids=decoder_input_ids,
           attention_mask=decoder_attention_mask,
+          # attention_mask=decoder_attention_mask,
           inputs_embeds=decoder_inputs_embeds,
           past_key_values=past_key_values,
-          encoder_hidden_states=hidden_states,
-          encoder_attention_mask=torch.cat([neighboors_embeddings_mask, attention_mask], dim=1),
+          encoder_hidden_states=torch.cat([prepad_encoder_hidden_states,hidden_states], dim=1),
+          # encoder_attention_mask=attention_mask,
+          encoder_attention_mask=torch.cat([neighboors_embeddings_mask, attention_mask], dim=1).long(),
           head_mask=decoder_head_mask,
           cross_attn_head_mask=cross_attn_head_mask,
           use_cache=use_cache,
