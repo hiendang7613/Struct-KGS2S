@@ -2316,8 +2316,8 @@ class StructKGS2S(T5ForConditionalGeneration):
       neighboors_embeddings_mask=None,
   ) :
 
-      value_embeddings = self.value_projection2(neighboors_embeddings) +1
-      key_embeddings = self.key_projection(target_ent_embeddings) +1 # * neighboors_embeddings_mask.unsqueeze(2)
+      value_embeddings = self.value_projection2(self.act(self.value_projection1(neighboors_embeddings))) 
+      key_embeddings = self.key_projection(target_ent_embeddings)
       batch_size = value_embeddings.shape[0]
 
       use_cache = use_cache if use_cache is not None else self.config.use_cache
@@ -2370,12 +2370,8 @@ class StructKGS2S(T5ForConditionalGeneration):
               attention_mask = attention_mask.to(self.decoder.first_device)
           if decoder_attention_mask is not None:
               decoder_attention_mask = decoder_attention_mask.to(self.decoder.first_device)
-      # print('neighboors_embeddings_mask=', neighboors_embeddings_mask)
-      # print('attention_mask=', torch.cat([neighboors_embeddings_mask, attention_mask], dim=1).long())
-      # if neighboors_embeddings_mask is not None:
-      #   decoder_attention_mask = torch.ones_like(decoder_input_ids)
-      #   decoder_attention_mask =torch.cat([neighboors_embeddings_mask, decoder_attention_mask], dim=1).long()
-      prepad_encoder_hidden_states = torch.zeros(batch_size, neighboors_embeddings_mask.shape[1], hidden_states.shape[2])
+
+      prepad_encoder_hidden_states = torch.zeros(batch_size, neighboors_embeddings_mask.shape[1], hidden_states.shape[2]).to(hidden_states.device)
       # Decode
       decoder_outputs = self.decoder(
           input_ids=decoder_input_ids,
@@ -2384,7 +2380,6 @@ class StructKGS2S(T5ForConditionalGeneration):
           inputs_embeds=decoder_inputs_embeds,
           past_key_values=past_key_values,
           encoder_hidden_states=torch.cat([prepad_encoder_hidden_states,hidden_states], dim=1),
-          # encoder_attention_mask=attention_mask,
           encoder_attention_mask=torch.cat([neighboors_embeddings_mask, attention_mask], dim=1).long(),
           head_mask=decoder_head_mask,
           cross_attn_head_mask=cross_attn_head_mask,
