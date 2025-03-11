@@ -2352,7 +2352,6 @@ class StructKGS2S(T5ForConditionalGeneration):
           cross_value = shape(value_embeddings, batch_size)
           past_key_values.append((cross_key, cross_value))
         past_key_values = EncoderDecoderCache(DynamicCache(), DynamicCache(past_key_values))
-        # past_key_values = past_key_values
 
 
       if self.model_parallel:
@@ -2376,7 +2375,6 @@ class StructKGS2S(T5ForConditionalGeneration):
       decoder_outputs = self.decoder(
           input_ids=decoder_input_ids,
           attention_mask=decoder_attention_mask,
-          # attention_mask=decoder_attention_mask,
           inputs_embeds=decoder_inputs_embeds,
           past_key_values=past_key_values,
           encoder_hidden_states=torch.cat([prepad_encoder_hidden_states,hidden_states], dim=1),
