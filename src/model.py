@@ -2281,17 +2281,20 @@ class T5ForQuestionAnswering(T5PreTrainedModel):
             encoder_attentions=encoder_outputs.attentions,
         )
 
-class StructKGS2S(T5ForConditionalGeneration):
+class StructKS2S(T5ForConditionalGeneration):
   def __init__(self, config: T5Config):
     super().__init__(config)
 
-    self.key_projection = nn.Linear(config.struct_d_model, config.d_model)
-    self.value_projection1 = nn.Linear(config.struct_d_model*2, config.struct_d_model*4)
-    self.value_projection2 = nn.Linear(config.struct_d_model*2, config.d_model)
-    self.act = nn.PReLU()
+    self.key_projection = nn.Linear(700, config.d_model)
+    self.value_projection = nn.Linear(700*2, config.d_model)
 
     self.post_init()
 
+  def k_projection(self, x, i, batch_size):
+    return shape(self.decoder.block[i].layer[1].EncDecAttention.k(x), batch_size)
+
+  def v_projection(self, x, i, batch_size):
+    return shape(self.decoder.block[i].layer[1].EncDecAttention.v(x), batch_size)
 
   def forward(
       self,
@@ -2316,12 +2319,11 @@ class StructKGS2S(T5ForConditionalGeneration):
       neighboors_embeddings_mask=None,
   ) :
 
-      value_embeddings = self.value_projection2(self.act(self.value_projection1(neighboors_embeddings))) 
-      key_embeddings = self.key_projection(target_ent_embeddings)
+      value_embeddings = self.value_projection(neighboors_embeddings)
+      key_embeddings = self.key_projection(target_ent_embeddings) * neighboors_embeddings_mask.unsqueeze(2)
       batch_size = value_embeddings.shape[0]
 
       use_cache = use_cache if use_cache is not None else self.config.use_cache
-      use_cache = True
       return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
       if encoder_outputs is None:
@@ -2348,10 +2350,11 @@ class StructKGS2S(T5ForConditionalGeneration):
 
         past_key_values = []
         for i in range(self.config.num_layers):
-          cross_key = shape(key_embeddings, batch_size)
-          cross_value = shape(value_embeddings, batch_size)
-          past_key_values.append((cross_key, cross_value))
-        past_key_values = EncoderDecoderCache(DynamicCache(), DynamicCache(past_key_values))
+          cross_key = self.k_projection(key_embeddings, i, batch_size)
+          cross_value = self.v_projection(value_embeddings, i, batch_size)
+          self_key = torch.zeros_like(cross_key)
+          self_value = torch.zeros_like(cross_value)
+          past_key_values.append((self_key, self_value, cross_key, cross_value))
 
 
       if self.model_parallel:
@@ -2370,15 +2373,14 @@ class StructKGS2S(T5ForConditionalGeneration):
           if decoder_attention_mask is not None:
               decoder_attention_mask = decoder_attention_mask.to(self.decoder.first_device)
 
-      prepad_encoder_hidden_states = torch.zeros(batch_size, neighboors_embeddings_mask.shape[1], hidden_states.shape[2]).to(hidden_states.device)
       # Decode
       decoder_outputs = self.decoder(
           input_ids=decoder_input_ids,
           attention_mask=decoder_attention_mask,
           inputs_embeds=decoder_inputs_embeds,
           past_key_values=past_key_values,
-          encoder_hidden_states=torch.cat([prepad_encoder_hidden_states,hidden_states], dim=1),
-          encoder_attention_mask=torch.cat([neighboors_embeddings_mask, attention_mask], dim=1).long(),
+          encoder_hidden_states=hidden_states,
+          encoder_attention_mask=attention_mask,
           head_mask=decoder_head_mask,
           cross_attn_head_mask=cross_attn_head_mask,
           use_cache=use_cache,
@@ -2440,7 +2442,7 @@ class StructKGS2S(T5ForConditionalGeneration):
         **kwargs,
     ):
         # cut decoder_input_ids if past_key_values is used
-        if len(past_key_values.self_attention_cache.key_cache) !=0:
+        if past_key_values is not None:
             past_length = past_key_values[0][0].shape[2]
 
             # Some generation methods already pass only the last input ID
@@ -2451,8 +2453,6 @@ class StructKGS2S(T5ForConditionalGeneration):
                 remove_prefix_length = input_ids.shape[1] - 1
 
             input_ids = input_ids[:, remove_prefix_length:]
-        else:
-            past_key_values = None
 
         return {
             "decoder_input_ids": input_ids,
@@ -2467,4 +2467,5 @@ class StructKGS2S(T5ForConditionalGeneration):
             "target_ent_embeddings": target_ent_embeddings,
             "neighboors_embeddings": neighboors_embeddings,
             "neighboors_embeddings_mask": neighboors_embeddings_mask,
+            # "input_ids": input_ids,
         }
