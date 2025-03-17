@@ -133,7 +133,6 @@ if __name__ == "__main__":
     rel2text = get_rel2text(raw_data_dir, dataset)        
     entid2text = get_entid2text(ent2id, ent2text)
     ent_name_decode_list = get_ent_name_decode_list(tokenizer, entid2text)
-    trie = Trie(entid2text)
 
     train_triplet_id, train_triplet_tokens, train_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'train', ent2id, rel2id, ent2text, ent2decs, rel2text)
     valid_triplet_id, valid_triplet_tokens, valid_triplet_decs = get_triplets_data(raw_data_dir, dataset, 'valid', ent2id, rel2id, ent2text, ent2decs, rel2text)
@@ -157,7 +156,6 @@ if __name__ == "__main__":
         "struct_rel_emb":struct_rel_emb,
         "ent_name_decode_list":ent_name_decode_list,
         "entid2text":entid2text,
-        "trie":trie,
     }
 
     kg_data_path = os.path.join(root, 'data/processed', dataset, 'kg_data.pt')
