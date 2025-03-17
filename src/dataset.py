@@ -70,13 +70,13 @@ class KGCDataset(Dataset):
 
         self.get_neigs_0 ={
             'train': Hop1Index(self.id_triplets['train'], self.num_ents, 0),
-            'valid': Hop1Index(self.id_triplets['valid'], self.num_ents, 0),
-            'test': Hop1Index(self.id_triplets['test'], self.num_ents, 0)
+            'valid': Hop1Index(self.id_triplets['train'], self.num_ents, 0),
+            'test': Hop1Index(self.id_triplets['train'], self.num_ents, 0)
         }
         self.get_neigs_2 ={
             'train': Hop1Index(self.id_triplets['train'], self.num_ents, 2),
-            'valid': Hop1Index(self.id_triplets['valid'], self.num_ents, 2),
-            'test': Hop1Index(self.id_triplets['test'], self.num_ents, 2)
+            'valid': Hop1Index(self.id_triplets['train'], self.num_ents, 2),
+            'test': Hop1Index(self.id_triplets['train'], self.num_ents, 2)
         }
         _tokenize.tokenizer = tokenizer
 
