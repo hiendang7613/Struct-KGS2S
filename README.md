@@ -34,6 +34,7 @@ Struct-KGS2S is designed to address the challenges in link prediction within Kno
   - PyTorch
   - NumPy
   - Pandas
+  - transformers==4.40.1
 
 ## Installation
 
