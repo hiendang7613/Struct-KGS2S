@@ -53,4 +53,3 @@ The project includes preconfigured support for the following Knowledge Graph dat
 - **Wikidata5M**
 - **WN18RR**
 
-Each dataset is accessible under its respective license. Please ensure appropriate use.
