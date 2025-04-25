@@ -13,7 +13,7 @@ def shape(states, batch_size, config):
     return states.view(batch_size, -1, config.num_heads, 64).transpose(1, 2)
 
 
-class EditedT5v2(T5ForConditionalGeneration):
+class StructKS2S_v2(T5ForConditionalGeneration):
   def __init__(self, config: T5Config):
     super().__init__(config)
 
