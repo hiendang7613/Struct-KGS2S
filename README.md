@@ -11,11 +11,7 @@ This repository contains the code, data, and resources for Struct-KGS2S, a novel
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Datasets](#datasets)
-- [Training & Evaluation](#training--evaluation)
-- [Usage](#usage)
-- [Results](#results)
-- [License](#license)
-- [Acknowledgments](#acknowledgments)
+
 
 ## Overview
 
